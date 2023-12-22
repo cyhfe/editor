@@ -5,6 +5,7 @@ import SelectionRect from "./SelectionRect";
 import KonvaImage from "./KonvaImage";
 import { useEditor } from "./context/Editor";
 import { useSelection } from "./context/Selection";
+import Konva from "konva";
 export default function Canvas() {
   const { layers, trRef, stageRef, selectionRef } = useEditor();
   const { setSelectedId, setIsSelecting, isSelecting, setSelectionRect } =
@@ -30,8 +31,9 @@ export default function Canvas() {
 
   function handleMouseDown(e: KonvaEventObject<MouseEvent>) {
     const stage = stageRef.current;
-    const selectionRect = selectionRef.current;
-    if (!stage || !selectionRect || e.target !== stage) return;
+    const selection = selectionRef.current;
+    if (!stage || !selection || e.target !== stage) return;
+    console.log(1);
     e.evt.preventDefault();
     const { x, y } = stage.getPointerPosition() ?? { x: 0, y: 0 };
     setSelectionRect({
@@ -43,8 +45,22 @@ export default function Canvas() {
     setIsSelecting(true);
   }
 
-  function handleMouseUp() {
+  function handleMouseUp(e: KonvaEventObject<MouseEvent>) {
+    const stage = stageRef.current;
+    const selection = selectionRef.current;
+    const tr = trRef.current;
+    if (!stage || !selection || !tr || !isSelecting) return;
+
+    e.evt.preventDefault();
     setIsSelecting(false);
+    const shapes = stage.find(".layer");
+
+    const box = selection.getClientRect();
+    const selected = shapes.filter((shape) =>
+      Konva.Util.haveIntersection(box, shape.getClientRect())
+    );
+    console.log(selected);
+    tr.nodes(selected);
   }
 
   function handleClick(e: KonvaEventObject<MouseEvent>) {
