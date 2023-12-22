@@ -1,15 +1,16 @@
 import Konva from "konva";
 import { KonvaEventObject } from "konva/lib/Node";
 import * as React from "react";
-import { Layer, Stage, Image, Transformer } from "react-konva";
+import { Layer, Stage, Image, Transformer, Rect } from "react-konva";
 import useImage from "use-image";
 import { v4 as uuidv4 } from "uuid";
 interface EditorContextValue {
   layers: EditorLayers;
   setLayers: React.Dispatch<React.SetStateAction<EditorLayers>>;
-  trRef: React.MutableRefObject<any>;
+  trRef: React.RefObject<Konva.Transformer>;
   selectedId: string[];
   setSelectedId: React.Dispatch<React.SetStateAction<string[]>>;
+  stageRef: React.RefObject<Konva.Stage>;
 }
 
 const EditorContext = React.createContext<EditorContextValue | null>(null);
@@ -43,10 +44,10 @@ function KonvaImage({ src, id }: KonvaImageProps) {
       if (isSelected && imageRef.current) {
         // we need to attach transformer manually
         tr.nodes([imageRef.current]);
-        tr.getLayer().batchDraw();
+        tr.getLayer()?.batchDraw();
       } else {
         tr.nodes([]);
-        tr.getLayer().batchDraw();
+        tr.getLayer()?.batchDraw();
       }
     }
 
@@ -72,10 +73,16 @@ function KonvaImage({ src, id }: KonvaImageProps) {
   );
 }
 
+function SelectionRect() {
+  return <Rect fill="rgba(0,0,255,0.5)" visible={false} />;
+}
+
 export default function Editor() {
   const [layers, setLayers] = React.useState<EditorLayers>([]);
-  const trRef = React.useRef<any>(null);
+  const trRef = React.useRef<Konva.Transformer>(null);
   const [selectedId, setSelectedId] = React.useState<string[]>([]);
+  const stageRef = React.useRef<Konva.Stage>(null);
+
   const value = React.useMemo(() => {
     return {
       layers,
@@ -83,6 +90,7 @@ export default function Editor() {
       trRef,
       selectedId,
       setSelectedId,
+      stageRef,
     };
   }, [layers, selectedId]);
 
@@ -130,19 +138,16 @@ function Panel() {
 }
 
 const Canvas = () => {
-  const ref = React.useRef<Konva.Stage>(null);
-  const { layers, setSelectedId, trRef } = useEditor();
-  // const trRef = React.useRef<Konva.Transformer>(null);
-
+  const { layers, setSelectedId, trRef, stageRef } = useEditor();
   const containerRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
-    const stage = ref.current;
+    const stage = stageRef.current;
     const container = containerRef.current;
     if (!stage || !container) return;
     stage.width(container.offsetWidth);
     stage.height(container.offsetHeight);
-  }, []);
+  }, [stageRef]);
 
   function checkDeselect(
     e: KonvaEventObject<MouseEvent> | KonvaEventObject<TouchEvent>
@@ -156,12 +161,13 @@ const Canvas = () => {
   return (
     <div className="grow w-full h-full p-2" ref={containerRef}>
       <Stage
-        ref={ref}
+        ref={stageRef}
         onMouseDown={checkDeselect}
         onTouchStart={checkDeselect}
         className="w-full h-[600px] outline-2 outline-slate-400 outline-dashed overflow-hidden"
       >
         <Layer>
+          <SelectionRect />
           {layers.map((layer) => {
             if (layer.type === "image") {
               return (
@@ -171,7 +177,6 @@ const Canvas = () => {
               return null;
             }
           })}
-
           <Transformer
             ref={trRef}
             flipEnabled={false}
