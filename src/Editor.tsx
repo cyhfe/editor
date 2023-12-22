@@ -1,25 +1,61 @@
 import Konva from "konva";
 import * as React from "react";
-import { Layer, Stage } from "react-konva";
+import { Layer, Stage, Image } from "react-konva";
+import useImage from "use-image";
+
+interface EditorContextValue {
+  layers: EditorLayers;
+  setLayers: React.Dispatch<React.SetStateAction<EditorLayers>>;
+}
+
+const EditorContext = React.createContext<EditorContextValue | null>(null);
+const useEditor = () => {
+  const ctx = React.useContext(EditorContext);
+  if (ctx === null) {
+    throw new Error("useEditor must be used within a EditorProvider");
+  }
+  return ctx;
+};
+
+type EditorLayers = React.ReactNode[];
+
+function KonvaImage({ src }: { src: string }) {
+  const [image] = useImage(src);
+  return <Image image={image} draggable />;
+}
 
 export default function Editor() {
-  const [layer, setLayer] = React.useState([]);
+  const [layers, setLayers] = React.useState<EditorLayers>([]);
+
+  const value = React.useMemo(() => {
+    return {
+      layers,
+      setLayers,
+    };
+  }, [layers]);
+
   return (
-    <div className="flex">
-      <Panel />
-      <Canvas />
-    </div>
+    <EditorContext.Provider value={value}>
+      <div className="flex">
+        <Panel />
+        <Canvas />
+      </div>
+    </EditorContext.Provider>
   );
 }
 
 const images = ["/bag.webp", "/chair.webp", "/headphones.webp"];
 
 function Panel() {
+  const { setLayers } = useEditor();
   return (
     <div>
       {images.map((src) => {
         return (
           <img
+            onClick={() => {
+              setLayers((prev) => [...prev, <KonvaImage src={src} />]);
+            }}
             src={src}
             alt=""
             key={src}
@@ -35,11 +71,11 @@ function Panel() {
 
 const Canvas = () => {
   const ref = React.useRef<Konva.Stage>(null);
-
-  const handleExport = () => {
-    const uri = ref.current?.toDataURL();
-    console.log(uri);
-  };
+  const { layers } = useEditor();
+  // const handleExport = () => {
+  //   const uri = ref.current?.toDataURL();
+  //   console.log(uri);
+  // };
 
   const containerRef = React.useRef<HTMLDivElement>(null);
 
@@ -55,13 +91,9 @@ const Canvas = () => {
     <div className="grow w-full h-full p-2" ref={containerRef}>
       <Stage
         ref={ref}
-        className="w-full h-[600px] outline-2 outline-slate-400 outline-dashed"
+        className="w-full h-[600px] outline-2 outline-slate-400 outline-dashed overflow-hidden"
       >
-        <Layer>
-          {/* <LionImage />
-          <LionImage /> */}
-          {/* {getImages()} */}
-        </Layer>
+        <Layer>{layers}</Layer>
       </Stage>
     </div>
   );
