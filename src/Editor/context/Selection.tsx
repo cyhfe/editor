@@ -5,6 +5,8 @@ interface SelectionContextValue {
   setSelectedId: React.Dispatch<React.SetStateAction<string[]>>;
   isSelecting: boolean;
   setIsSelecting: React.Dispatch<React.SetStateAction<boolean>>;
+  selectionRect: SelectionRect;
+  setSelectionRect: React.Dispatch<React.SetStateAction<SelectionRect>>;
 }
 
 const SelectionContext = React.createContext<SelectionContextValue | null>(
@@ -37,6 +39,7 @@ export function SelectionProvider({ children }: { children: React.ReactNode }) {
       setSelectionRect,
     };
   }, [isSelecting, selectedId, selectionRect]);
+
   return (
     <SelectionContext.Provider value={value}>
       {children}

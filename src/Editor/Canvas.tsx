@@ -6,8 +6,9 @@ import KonvaImage from "./KonvaImage";
 import { useEditor } from "./context/Editor";
 import { useSelection } from "./context/Selection";
 export default function Canvas() {
-  const { layers, trRef, stageRef } = useEditor();
-  const { setSelectedId, setIsSelecting, isSelecting } = useSelection();
+  const { layers, trRef, stageRef, selectionRef } = useEditor();
+  const { setSelectedId, setIsSelecting, isSelecting, setSelectionRect } =
+    useSelection();
   const containerRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
@@ -27,7 +28,18 @@ export default function Canvas() {
     }
   }
 
-  function handleMouseDown() {
+  function handleMouseDown(e: KonvaEventObject<MouseEvent>) {
+    const stage = stageRef.current;
+    const selectionRect = selectionRef.current;
+    if (!stage || !selectionRect || e.target !== stage) return;
+    e.evt.preventDefault();
+    const { x, y } = stage.getPointerPosition() ?? { x: 0, y: 0 };
+    setSelectionRect({
+      x1: x,
+      y1: y,
+      x2: x,
+      y2: y,
+    });
     setIsSelecting(true);
   }
 
@@ -35,25 +47,35 @@ export default function Canvas() {
     setIsSelecting(false);
   }
 
+  function handleClick(e: KonvaEventObject<MouseEvent>) {
+    checkDeselect(e);
+  }
+
   function handleMouseMove(e: KonvaEventObject<MouseEvent>) {
-    if (!isSelecting) {
+    const stage = stageRef.current;
+    if (!isSelecting || !stage) {
       return;
     }
     e.evt.preventDefault();
+    const { x, y } = stage.getPointerPosition() ?? { x: 0, y: 0 };
+    setSelectionRect((prev) => ({
+      ...prev,
+      x2: x,
+      y2: y,
+    }));
   }
 
   return (
     <div className="grow w-full h-full p-2" ref={containerRef}>
       <Stage
         ref={stageRef}
-        onClick={checkDeselect}
+        onClick={handleClick}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         className="w-full h-[600px] outline-2 outline-slate-400 outline-dashed overflow-hidden"
       >
         <Layer>
-          <SelectionRect />
           {layers.map((layer) => {
             if (layer.type === "image") {
               return (
@@ -74,6 +96,8 @@ export default function Canvas() {
               return newBox;
             }}
           />
+
+          <SelectionRect />
         </Layer>
       </Stage>
     </div>

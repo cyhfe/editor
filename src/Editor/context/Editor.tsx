@@ -13,6 +13,7 @@ interface EditorContextValue {
   setLayers: React.Dispatch<React.SetStateAction<EditorLayers>>;
   trRef: React.RefObject<Konva.Transformer>;
   stageRef: React.RefObject<Konva.Stage>;
+  selectionRef: React.RefObject<Konva.Rect>;
 }
 
 const EditorContext = React.createContext<EditorContextValue | null>(null);
@@ -22,12 +23,14 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
   const trRef = React.useRef<Konva.Transformer>(null);
 
   const stageRef = React.useRef<Konva.Stage>(null);
+  const selectionRef = React.useRef<Konva.Rect>(null);
   const value = React.useMemo(() => {
     return {
       layers,
       setLayers,
       trRef,
       stageRef,
+      selectionRef,
     };
   }, [layers]);
   return (
