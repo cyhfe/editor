@@ -8,8 +8,13 @@ import { useSelection } from "./context/Selection";
 import Konva from "konva";
 export default function Canvas() {
   const { layers, trRef, stageRef, selectionRef } = useEditor();
-  const { setSelectedId, setIsSelecting, isSelecting, setSelectionRect } =
-    useSelection();
+  const {
+    selectedId,
+    setSelectedId,
+    setIsSelecting,
+    isSelecting,
+    setSelectionRect,
+  } = useSelection();
   const containerRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
@@ -19,6 +24,17 @@ export default function Canvas() {
     stage.width(container.offsetWidth);
     stage.height(container.offsetHeight);
   }, [stageRef]);
+
+  React.useEffect(() => {
+    const tf = trRef.current;
+    const stage = stageRef.current;
+    if (!tf || !stage) return;
+    const shapes = stage.find(".layer");
+    const selectedShapes = shapes.filter((shape) =>
+      selectedId.includes(shape.id())
+    );
+    tf.nodes(selectedShapes);
+  }, [selectedId, stageRef, trRef]);
 
   function checkDeselect(
     e: KonvaEventObject<MouseEvent> | KonvaEventObject<TouchEvent>
@@ -33,7 +49,6 @@ export default function Canvas() {
     const stage = stageRef.current;
     const selection = selectionRef.current;
     if (!stage || !selection || e.target !== stage) return;
-    console.log(1);
     e.evt.preventDefault();
     const { x, y } = stage.getPointerPosition() ?? { x: 0, y: 0 };
     setSelectionRect({
@@ -54,13 +69,20 @@ export default function Canvas() {
     e.evt.preventDefault();
     setIsSelecting(false);
     const shapes = stage.find(".layer");
-
     const box = selection.getClientRect();
-    const selected = shapes.filter((shape) =>
-      Konva.Util.haveIntersection(box, shape.getClientRect())
-    );
-    console.log(selected);
-    tr.nodes(selected);
+    const selected: string[] = [];
+    shapes.forEach((shape) => {
+      const isSelected = Konva.Util.haveIntersection(
+        box,
+        shape.getClientRect()
+      );
+      if (isSelected) {
+        selected.push(shape.id());
+      }
+    });
+    setSelectedId(selected);
+    // console.log(selected);
+    // tr.nodes(selected);
   }
 
   function handleClick(e: KonvaEventObject<MouseEvent>) {
